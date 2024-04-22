@@ -165,7 +165,7 @@ class Transpose(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return out_grad.transpose(self.axes)
         ### END YOUR SOLUTION
 
 
@@ -184,7 +184,9 @@ class Reshape(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        # raise NotImplementedError()
+        # return array_api.reshape(out_grad, self.shape)
+        return out_grad.reshape(node.inputs[0].shape)
         ### END YOUR SOLUTION
 
 
@@ -202,9 +204,13 @@ class BroadcastTo(TensorOp):
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        ori_shape = node.inputs[0].shape
+        shrink_dims = [i for i in range(len(self.shape))]
+        for i, (ori, cur) in enumerate(zip(reversed(ori_shape), reversed(self.shape))):
+            if ori == cur:
+                shrink_dims[len(self.shape) - i - 1] = -1
+        shrink_dims = tuple(filter(lambda x: x >= 0, shrink_dims))
+        return out_grad.sum(shrink_dims).reshape(ori_shape)
 
 
 def broadcast_to(a, shape):
@@ -221,9 +227,11 @@ class Summation(TensorOp):
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        new_shape = list(node.inputs[0].shape)
+        axes = range(len(new_shape)) if self.axes is None else self.axes
+        for axis in axes:
+            new_shape[axis] = 1
+        return out_grad.reshape(new_shape).broadcast_to(node.inputs[0].shape)
 
 
 def summation(a, axes=None):
@@ -248,7 +256,8 @@ class MatMul(TensorOp):
         lhs, rhs = node.inputs
         lgrad, rgrad = matmul(out_grad, rhs.transpose()), matmul(lhs.transpose(), out_grad)
         if len(lhs.shape) < len(lgrad.shape):
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
+            # breakpoint()
             lgrad = lgrad.sum(tuple([i for i in range(len(lgrad.shape) - len(lhs.shape))]))
         if len(rhs.shape) < len(rgrad.shape):
             rgrad = rgrad.sum(tuple([i for i in range(len(rgrad.shape) - len(rhs.shape))]))
@@ -268,7 +277,7 @@ class Negate(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return -out_grad
         ### END YOUR SOLUTION
 
 
