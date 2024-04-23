@@ -10,7 +10,7 @@ sys.path.append("python/")
 import needle as ndl
 
 
-def parse_mnist(image_filesname, label_filename):
+def parse_mnist(image_filename, label_filename):
     """Read an images and labels file in MNIST format.  See this page:
     http://yann.lecun.com/exdb/mnist/ for a description of the file format.
 
@@ -32,9 +32,24 @@ def parse_mnist(image_filesname, label_filename):
                 labels of the examples.  Values should be of type np.int8 and
                 for MNIST will contain the values 0-9.
     """
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    with gzip.open(image_filename, "rb") as img_file:
+        magic_num, img_num, row, col = struct.unpack(">4i", img_file.read(16))
+        assert(magic_num == 2051)
+        tot_pixels = row * col
+        X = np.vstack([np.array(
+          struct.unpack(f"{tot_pixels}B", img_file.read(tot_pixels)),
+          dtype=np.float32) for _ in range(img_num)])
+        X -= np.min(X)
+        X /= np.max(X)
+
+    with gzip.open(label_filename, "rb") as label_file:
+        magic_num, label_num = struct.unpack(">2i", label_file.read(8))
+        assert(magic_num == 2049)
+        y = np.array(
+          struct.unpack(f"{label_num}B", label_file.read()),
+          dtype=np.uint8)
+
+    return X, y
 
 
 def softmax_loss(Z, y_one_hot):
@@ -53,9 +68,12 @@ def softmax_loss(Z, y_one_hot):
     Returns:
         Average softmax loss over the sample. (ndl.Tensor[np.float32])
     """
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+
+    # return ndl.summation(
+    #     ndl.log(ndl.summation(ndl.exp(Z), axis=1)) -
+    #     Z[y_one_hot]
+    # ) / y_one_hot.shape[0]
+    return (ndl.log(ndl.exp(Z).sum((1,))).sum() - (Z * y_one_hot).sum()) / Z.shape[0]
 
 
 def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
@@ -82,9 +100,31 @@ def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
             W2: ndl.Tensor[np.float32]
     """
 
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    iterations = (y.size + batch - 1) // batch
+
+    # for i in range(iterations):
+    #     x = X[i * batch : (i+1) * batch, :]
+    #     yy = y[i * batch : (i+1) * batch]
+    #     Z1 = ReLU(x @ W1)
+    #     Z2 = np.exp(Z1@W2)
+    #     Y = np.zeros((batch, y.max() + 1))
+    #     Y[np.arange(batch), yy] = 1
+    #     G2 = Z2 / np.sum(Z2, axis=1, keepdims=True) - Y
+    #     G1 = np.where(Z1 > 0, 1, 0) * (G2@W2.T)
+    #     W1 -= lr/batch*x.T@G1
+    #     W2 -= lr/batch*Z1.T@G2
+    for i in range(iterations):
+        x = ndl.Tensor(X[i * batch : (i+1) * batch, :])
+        Z = ndl.relu(x.matmul(W1)).matmul(W2)
+        yy = y[i * batch : (i+1) * batch]
+        y_one_hot = np.zeros((batch, y.max() + 1))
+        y_one_hot[np.arange(batch), yy] = 1
+        y_one_hot = ndl.Tensor(y_one_hot)
+        loss = softmax_loss(Z, y_one_hot)
+        loss.backward()
+        W1 = ndl.Tensor(W1.realize_cached_data() - lr * W1.grad.realize_cached_data())
+        W2 = ndl.Tensor(W2.realize_cached_data() - lr * W2.grad.realize_cached_data())
+    return W1, W2
 
 
 ### CODE BELOW IS FOR ILLUSTRATION, YOU DO NOT NEED TO EDIT
