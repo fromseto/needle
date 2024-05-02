@@ -5,6 +5,7 @@ from needle.autograd import Tensor
 from needle import ops
 import needle.init as init
 import numpy as np
+from functools import reduce
 
 
 class Parameter(Tensor):
@@ -103,9 +104,8 @@ class Linear(Module):
 
 class Flatten(Module):
     def forward(self, X):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        size = reduce(lambda a, b: a * b, X.shape[1:])
+        return X.reshape((X.shape[0], size))
 
 
 class ReLU(Module):
