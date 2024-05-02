@@ -126,9 +126,12 @@ class Sequential(Module):
 
 class SoftmaxLoss(Module):
     def forward(self, logits: Tensor, y: Tensor):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        one_hot_y = init.one_hot(logits.shape[1], y)
+        return (
+            ops.summation(ops.logsumexp(logits, (1,)) / logits.shape[0]) -
+            ops.summation(one_hot_y * logits / logits.shape[0])
+        )
+
 
 
 class BatchNorm1d(Module):
@@ -152,14 +155,18 @@ class LayerNorm1d(Module):
         super().__init__()
         self.dim = dim
         self.eps = eps
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        self.weight = Parameter(init.ones(dim, requires_grad=True))
+        self.bias = Parameter(init.zeros(dim, requires_grad=True))
 
     def forward(self, x: Tensor) -> Tensor:
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        batch_size, num_feature = x.shape
+        mean = (x.sum((1,))/num_feature).reshape((-1, 1)).broadcast_to(x.shape)
+        var = (((x - mean)**2).sum((1,))/num_feature).reshape((-1, 1)).broadcast_to(x.shape)
+        deno = (var + self.eps)**0.5
+        # breakpoint()
+        y = (self.weight.broadcast_to(x.shape) * (x - mean)/deno
+            + self.bias.broadcast_to(x.shape))
+        return y 
 
 
 class Dropout(Module):
