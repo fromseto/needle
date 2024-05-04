@@ -65,6 +65,28 @@ class Adam(Optimizer):
         self.v = {}
 
     def step(self):
-        ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
-        ### END YOUR SOLUTION
+        self.t += 1
+        for p in self.params:
+            m = (self.beta1 * self.m.get(p, 0.) +
+                (1. - self.beta1) * (
+                    p.grad.data + self.weight_decay * p.data
+                )
+            )
+            v = (self.beta2 * self.v.get(p, 0.) +
+                (1. - self.beta2) * (
+                    p.grad.data + self.weight_decay * p.data
+                )**2
+            )
+
+            self.m[p] = m
+            self.v[p] = v
+            
+            m_hat = m / (1 - self.beta1**self.t)
+            v_hat = v / (1 - self.beta2**self.t)
+
+
+
+            grad = m_hat / (v_hat**0.5 + self.eps)
+
+            p.data -= self.lr * grad
+
