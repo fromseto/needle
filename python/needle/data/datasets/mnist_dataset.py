@@ -39,9 +39,10 @@ class MNISTDataset(Dataset):
         imgs = self.X[index]
         labels = self.y[index]
         if len(imgs.shape) > 1:
-            imgs = np.vstack([self.apply_transforms(img.reshape(28, 28, 1)) for img in imgs])
+            # imgs = np.vstack([self.apply_transforms(img.reshape(28, 28, 1)) for img in imgs])
+            imgs = np.vstack([self.apply_transforms(img) for img in imgs])
         else:
-            imgs = self.apply_transforms(imgs.reshape(28, 28, 1))
+            imgs = self.apply_transforms(imgs)
         return imgs,labels
 
     def __len__(self) -> int:
